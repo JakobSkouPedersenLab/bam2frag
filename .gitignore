@@ -218,3 +218,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# bam2frag
+# Rust build artifacts (target/ is already ignored above, but name the crate
+# explicitly so it is obvious where the compiled extractor lives).
+rust/bam2frag/target/
+
+# Extracted sample directories and partial output from interrupted runs.
+data/
+*.incomplete.*
+
+# Local cluster/bam listings
+bam_paths.txt
+
+# Smoke test output
+smoke_out/
