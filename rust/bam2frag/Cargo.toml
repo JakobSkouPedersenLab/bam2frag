@@ -1,0 +1,39 @@
+[package]
+name = "bam2frag"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.82"
+description = "Extract natural cfDNA fragments from BAM files into a compressed fragment bank"
+license = "MIT"
+
+[[bin]]
+name = "bam2frag-core"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+byteorder = "1.5"
+blake2 = "0.10"
+clap = { version = "4.5", features = ["derive"] }
+csv = "1.3"
+hashbrown = { version = "0.15", features = ["serde"] }
+ndarray = "0.17.2"
+ndarray-npy = "0.10.0"
+rand = "0.8"
+rand_pcg = "0.3"
+rayon = "1.10"
+rust-htslib = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+sha2 = "0.10"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
+serde_json = { version = "1", features = ["preserve_order"] }
+zstd = "0.13"
+
+[dev-dependencies]
+tempfile = "3.14"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
+panic = "abort"
