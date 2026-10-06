@@ -1,0 +1,11 @@
+# The Rust sources are formatted with newline_style = "Unix" (rustfmt.toml), and
+# the shell scripts run on Linux, so keep LF in the working tree everywhere
+# rather than letting autocrlf decide per platform.
+* text=auto eol=lf
+
+*.png binary
+*.npy binary
+*.npz binary
+*.bin binary
+*.bam binary
+*.bai binary
