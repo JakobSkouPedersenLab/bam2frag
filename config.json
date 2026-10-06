@@ -1,0 +1,84 @@
+{
+  "coordinate_system": {
+    "genome": "hg38",
+    "chromosomes": "all",
+    "region_window_bp": 1000000,
+    "region_stride": 1000000
+  },
+  "reservoir_sampling": {
+    "fetch_padding_bp": 500,
+    "seed": 0,
+    "stored_fragments_per_region": 10000
+  },
+  "feature_sets": {
+    "fragment_sequence": {
+      "array_names": [
+        "fragment_ref",
+        "fragment_r1",
+        "fragment_r2",
+        "fragment_r1_qual",
+        "fragment_r2_qual",
+        "fragment_r1_cycle",
+        "fragment_r2_cycle"
+      ],
+      "seq_window_w": 320
+    }
+  },
+  "fragment_atac_covariates": {
+    "enabled": false,
+    "mask_bin_size_bp": 10,
+    "groups": [
+      {
+        "name": "blood",
+        "members": [
+          "neutrophil__pc",
+          "monocyte__pc",
+          "b_cell__pc",
+          "t_cell__pc",
+          "natural_killer_cell__pc",
+          "erythroblasts__pc",
+          "mega__pc"
+        ]
+      },
+      {
+        "name": "colon",
+        "members": [
+          "colonic_mucosa__tis"
+        ]
+      },
+      {
+        "name": "bladder",
+        "members": [
+          "mucosa_of_urinary_bladder__tis"
+        ]
+      }
+    ]
+  },
+  "min_len": 30,
+  "max_len": 299,
+  "max_reference_mismatch_fraction": 0.1,
+  "min_mapq": 30,
+  "max_mate_buffer": 1000000,
+  "chromatin_bin_size_bp": 10,
+  "filters": {
+    "patient_snp_blacklist": {
+      "enabled": false
+    },
+    "donor_blacklist": {
+      "enabled": false
+    },
+    "low_power_blacklist": {
+      "enabled": false
+    },
+    "problematic_blacklist": {
+      "enabled": false
+    },
+    "pair_eligibility": {
+      "strict_trustworthy_ends": true,
+      "reject_clipping": true,
+      "reject_protruding_3p": true,
+      "require_full_fragment_coverage": true,
+      "require_complete_reference_window": true
+    }
+  }
+}
