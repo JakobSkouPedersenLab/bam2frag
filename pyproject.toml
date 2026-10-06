@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "bam2frag"
+version = "0.1.0"
+description = "Extract natural cfDNA fragments from BAM files into a compressed fragment bank"
+authors = ["Christian Lillelund"]
+readme = "README.md"
+packages = [{ include = "src" }]
+
+[tool.poetry.dependencies]
+# The CLI is a stdlib-only wrapper around the Rust extractor.
+python = "^3.12"
+
+[tool.poetry.scripts]
+bam2frag = "src.bam2frag:cli"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.0"
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
