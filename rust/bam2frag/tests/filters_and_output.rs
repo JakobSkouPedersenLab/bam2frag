@@ -62,7 +62,7 @@ fn write_complete_packed_output_layout(output_dir: &Path) {
         write_file(&output_dir.join(name), b"dummy");
     }
     let cfg = common::natural_resolved_config();
-    let payload = encode_payload(7, 0, PayloadKind::Natural, &[], &cfg).unwrap();
+    let payload = encode_payload(7, PayloadKind::Natural, &[], &cfg).unwrap();
     write_one_region_bank(output_dir, &payload);
 }
 
@@ -72,7 +72,6 @@ fn write_one_region_bank(output_dir: &Path, payload: &[u8]) {
     writer
         .write_region(PackedRegion {
             region_id: 7,
-            local_pos: 0,
             payloads: vec![compress_payload(payload).unwrap()],
             counts: vec![0],
         })
@@ -187,7 +186,7 @@ fn inspect_output_rejects_malformed_payload() {
     let tmp = tempdir().unwrap();
     make_layout_natural(tmp.path());
     let cfg = common::natural_resolved_config();
-    let mut payload = encode_payload(7, 0, PayloadKind::Natural, &[], &cfg).unwrap();
+    let mut payload = encode_payload(7, PayloadKind::Natural, &[], &cfg).unwrap();
     payload[0] = b'X';
     write_one_region_bank(tmp.path(), &payload);
 

@@ -30,10 +30,7 @@ fn synthetic_fragment(anchor: i64, width: usize) -> MaterializedFragment {
         r2_cycle[position] = (cycle0 + 1) as u8;
     }
     MaterializedFragment {
-        key: ReservoirKey {
-            region_id: 7,
-            local_pos: 0,
-        },
+        key: ReservoirKey { region_id: 7 },
         anchor_rpos0: anchor,
         ref_aln: vec![1; width],
         r1_aln,
@@ -55,7 +52,7 @@ fn dnapack8_payload_has_exact_expected_size_and_no_event_plane() {
     let fragments = (0..10_000)
         .map(|index| synthetic_fragment(index, width))
         .collect::<Vec<_>>();
-    let packed = pack_region(7, 0, &fragments, &cfg).unwrap();
+    let packed = pack_region(7, &fragments, &cfg).unwrap();
     let total = fragments.len();
     let dna = 3 * (total * width * 4).div_ceil(8);
     let quality = 2 * (total * width * 6).div_ceil(8);
@@ -76,7 +73,7 @@ fn dnapack8_reference_packer_round_trips_every_plane() {
     let cfg = natural_resolved_config();
     let width = cfg.typed.feature_sets.fragment_sequence.seq_window_w;
     let fragment = synthetic_fragment(11, width);
-    let packed = pack_region(7, 0, &[fragment.clone()], &cfg).unwrap();
+    let packed = pack_region(7, &[fragment.clone()], &cfg).unwrap();
     let payload =
         decompress_payload(&packed.payloads[0].frame, payload_nbytes(1).unwrap()).unwrap();
     let decoded = decode_payload(&payload).unwrap();

@@ -9,10 +9,7 @@ fn candidate(id: i64) -> ValidatedFragmentCandidate {
     let left = 1_000_000 + id * 2;
     let right = left + 159;
     ValidatedFragmentCandidate {
-        key: ReservoirKey {
-            region_id: 7,
-            local_pos: 0,
-        },
+        key: ReservoirKey { region_id: 7 },
         pair: PairCandidate {
             read1: Record::new(),
             read2: Record::new(),

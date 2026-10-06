@@ -47,13 +47,11 @@ fn natural_fragment_bank_writer_emits_one_payload_and_dnaidx8_at_10k() {
     let regions = vec![
         PackedRegion {
             region_id: 7,
-            local_pos: 0,
             payloads: vec![frame(b"natural-a", 1_000)],
             counts: vec![10_000],
         },
         PackedRegion {
             region_id: 8,
-            local_pos: 0,
             payloads: vec![frame(b"natural-b", 500)],
             counts: vec![777],
         },
@@ -101,7 +99,6 @@ fn natural_writer_rejects_an_empty_frame() {
     let err = writer
         .write_region(PackedRegion {
             region_id: 7,
-            local_pos: 0,
             payloads: vec![frame(b"", 112)],
             counts: vec![0],
         })
@@ -116,7 +113,6 @@ fn natural_writer_rejects_multiple_payloads() {
     let err = writer
         .write_region(PackedRegion {
             region_id: 7,
-            local_pos: 0,
             payloads: vec![frame(b"a", 1), frame(b"b", 1)],
             counts: vec![1, 1],
         })

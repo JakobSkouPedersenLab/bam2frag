@@ -8,16 +8,14 @@ use serde::Serialize;
 #[derive(Clone, Debug, Serialize)]
 pub struct ReservoirStats {
     pub region_id: i64,
-    pub local_pos: u16,
     pub available_count: u64,
     pub sampled_count: u64,
 }
 
 impl ReservoirStats {
-    fn new(region_id: i64, local_pos: u16) -> Self {
+    fn new(region_id: i64) -> Self {
         Self {
             region_id,
-            local_pos,
             available_count: 0,
             sampled_count: 0,
         }
@@ -32,10 +30,10 @@ impl ReservoirStats {
 pub struct KeyedReservoir {
     capacity: usize,
     max_keys: Option<usize>,
-    buckets: HashMap<(i64, u16), Vec<ValidatedFragmentCandidate>>,
-    seen: HashMap<(i64, u16), u64>,
-    region_keys: HashSet<(i64, u16)>,
-    stats: HashMap<(i64, u16), ReservoirStats>,
+    buckets: HashMap<i64, Vec<ValidatedFragmentCandidate>>,
+    seen: HashMap<i64, u64>,
+    region_keys: HashSet<i64>,
+    stats: HashMap<i64, ReservoirStats>,
     rng: Pcg64Mcg,
 }
 
@@ -53,7 +51,7 @@ impl KeyedReservoir {
     }
 
     pub fn consider(&mut self, candidate: ValidatedFragmentCandidate) -> Result<()> {
-        let region_key = (candidate.key.region_id, candidate.key.local_pos);
+        let region_key = candidate.key.region_id;
         if !self.stats.contains_key(&region_key) {
             if !self.region_keys.contains(&region_key)
                 && self
@@ -64,7 +62,7 @@ impl KeyedReservoir {
             }
             self.region_keys.insert(region_key);
             self.stats
-                .insert(region_key, ReservoirStats::new(region_key.0, region_key.1));
+                .insert(region_key, ReservoirStats::new(region_key));
         }
         self.stats.get_mut(&region_key).unwrap().update(&candidate);
         let seen = self.seen.entry(region_key).or_insert(0);
@@ -100,7 +98,7 @@ impl KeyedReservoir {
             items.append(&mut bucket);
         }
         let mut stats: Vec<_> = self.stats.into_values().collect();
-        stats.sort_by_key(|row| (row.region_id, row.local_pos));
+        stats.sort_by_key(|row| row.region_id);
         (items, stats)
     }
 }

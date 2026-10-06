@@ -123,10 +123,7 @@ pub fn valid_materialized_fragment(atac: [f32; 3], orientation_code: u8) -> Mate
         r2_cycle[position] = (cycle0 + 1) as u8;
     }
     MaterializedFragment {
-        key: ReservoirKey {
-            region_id: 7,
-            local_pos: 0,
-        },
+        key: ReservoirKey { region_id: 7 },
         anchor_rpos0: 10,
         ref_aln: vec![1; width],
         r1_aln,

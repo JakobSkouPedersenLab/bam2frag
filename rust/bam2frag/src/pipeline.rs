@@ -20,7 +20,6 @@ use tracing::info;
 
 struct RegionWork {
     region_id: i64,
-    local_pos: i64,
     candidates: Vec<ValidatedFragmentCandidate>,
 }
 
@@ -39,18 +38,14 @@ fn group_candidates_by_region(
     let mut out = Vec::new();
     for candidate in candidates {
         let region_id = candidate.key.region_id;
-        // One region is one token: every fragment in a region shares local_pos
-        // 0. The block subdivision that local_pos used to index is gone.
-        let local_pos = 0;
-        let append = out.last().is_some_and(|region: &RegionWork| {
-            region.region_id == region_id && region.local_pos == local_pos
-        });
+        let append = out
+            .last()
+            .is_some_and(|region: &RegionWork| region.region_id == region_id);
         if append {
             out.last_mut().unwrap().candidates.push(candidate);
         } else {
             out.push(RegionWork {
                 region_id,
-                local_pos,
                 candidates: vec![candidate],
             });
         }
@@ -67,8 +62,7 @@ fn materialize_and_pack_region(
     let expected_fragments = work.candidates.len();
     let width = cfg.typed.feature_sets.fragment_sequence.seq_window_w;
     let mut scratch = features::MaterializeScratch::with_width(width);
-    let mut builder =
-        arrays::RegionPayloadBuilder::new(work.region_id, work.local_pos, expected_fragments, cfg);
+    let mut builder = arrays::RegionPayloadBuilder::new(work.region_id, expected_fragments, cfg);
     for candidate in work.candidates {
         let scalars = features::materialize_validated_into_scratch(
             candidate,
@@ -286,7 +280,7 @@ pub fn run_extract(args: ExtractArgs) -> Result<()> {
     let mut materialize_elapsed_sec = 0.0f64;
     let mut rst = Vec::new();
     let mut stats = Vec::new();
-    let mut active_keys = BTreeSet::<(i64, i64)>::new();
+    let mut active_keys = BTreeSet::<i64>::new();
     let mut total_retained = 0usize;
     let mut total_regions = 0usize;
     let mut materialize_processed = 0usize;
@@ -581,15 +575,8 @@ fn process_chrom(
                     let region_width = cfg.typed.coordinate_system.region_window_bp as i64;
                     let region_id = chr_index * cfg.typed.coordinate_system.region_stride as i64
                         + midpoint.div_euclid(region_width);
-                    // A region is not subdivided, so every fragment in it keys
-                    // on local_pos 0. The field survives in the bank format and
-                    // is a candidate for removal once that layout is revised.
-                    let local_pos = 0;
                     res.consider(ValidatedFragmentCandidate {
-                        key: ReservoirKey {
-                            region_id,
-                            local_pos,
-                        },
+                        key: ReservoirKey { region_id },
                         pair,
                         anchor_rpos0: midpoint,
                     })?;

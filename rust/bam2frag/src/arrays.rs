@@ -40,7 +40,7 @@ const INDEX_MAGIC: &[u8; 8] = b"FRAGIDX\0";
 const FORMAT_VERSION: u16 = 1;
 const PLANE_COUNT: usize = 9;
 const STRUCTURAL_RECORD_BYTES: usize = 4;
-const PAYLOAD_HEADER_BYTES: usize = 40 + PLANE_COUNT * 8;
+const PAYLOAD_HEADER_BYTES: usize = 32 + PLANE_COUNT * 8;
 pub const PAYLOAD_KINDS: usize = 1;
 
 fn payload_magic() -> &'static [u8; 8] {
@@ -68,14 +68,12 @@ pub struct PayloadIndex {
 pub struct BankIndexRow {
     pub region_index: u32,
     pub region_id: i64,
-    pub local_pos: i64,
     pub payloads: Vec<PayloadIndex>,
 }
 
 #[derive(Clone, Debug)]
 pub struct PackedRegion {
     pub region_id: i64,
-    pub local_pos: i64,
     pub payloads: Vec<CompressedPayload>,
     pub counts: Vec<u32>,
 }
@@ -235,7 +233,6 @@ impl FragmentBankWriter {
         self.rows.push(BankIndexRow {
             region_index,
             region_id: region.region_id,
-            local_pos: region.local_pos,
             payloads,
         });
         Ok(())
@@ -316,7 +313,6 @@ pub fn unpack_fixed_bits(bytes: &[u8], count: usize, bits: u8) -> Vec<u8> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DecodedPayload {
     pub region_id: i64,
-    pub local_pos: i64,
     pub width: usize,
     pub ref_aln: Vec<u8>,
     pub r1_aln: Vec<u8>,
@@ -380,7 +376,6 @@ pub fn decode_payload(bytes: &[u8]) -> Result<DecodedPayload> {
     let cycle_bits = cursor.read_u16::<LittleEndian>()?;
     let structural_bytes = cursor.read_u16::<LittleEndian>()? as usize;
     let region_id = cursor.read_i64::<LittleEndian>()?;
-    let local_pos = cursor.read_i64::<LittleEndian>()?;
     if width != crate::config::MOLECULAR_WINDOW_BP
         || numeric_features != 3
         || cycle_bits != 8
@@ -493,7 +488,6 @@ pub fn decode_payload(bytes: &[u8]) -> Result<DecodedPayload> {
     }
     Ok(DecodedPayload {
         region_id,
-        local_pos,
         width,
         ref_aln,
         r1_aln,
@@ -539,7 +533,7 @@ pub fn validate_bank_files(bank_path: &Path, index_path: &Path) -> Result<usize>
         bail!("bank index must declare one natural payload kind");
     }
     let rows = cursor.read_u32::<LittleEndian>()? as usize;
-    let expected_index_bytes = 16 + rows * (4 + 8 + 8 + 4 + 8 + 8);
+    let expected_index_bytes = 16 + rows * (4 + 8 + 4 + 8 + 8);
     if index.len() != expected_index_bytes {
         bail!("bank index length does not match its row count");
     }
@@ -550,7 +544,6 @@ pub fn validate_bank_files(bank_path: &Path, index_path: &Path) -> Result<usize>
             bail!("bank index region indices are not contiguous");
         }
         let region_id = cursor.read_i64::<LittleEndian>()?;
-        let local_pos = cursor.read_i64::<LittleEndian>()?;
         let count = cursor.read_u32::<LittleEndian>()? as usize;
         let offset = cursor.read_u64::<LittleEndian>()? as usize;
         let nbytes = cursor.read_u64::<LittleEndian>()? as usize;
@@ -567,10 +560,7 @@ pub fn validate_bank_files(bank_path: &Path, index_path: &Path) -> Result<usize>
             .with_context(|| format!("bank index row {expected_row}"))?;
         let decoded =
             decode_payload(&payload).with_context(|| format!("bank index row {expected_row}"))?;
-        if decoded.region_id != region_id
-            || decoded.local_pos != local_pos
-            || decoded.fragment_span_bp.len() != count
-        {
+        if decoded.region_id != region_id || decoded.fragment_span_bp.len() != count {
             bail!("bank index row does not match its fragment payload header");
         }
         previous_end = offset + nbytes;
@@ -722,7 +712,7 @@ impl PayloadBuilder {
         Ok(())
     }
 
-    fn finish(self, region_id: i64, local_pos: i64, cfg: &ResolvedConfig) -> Result<Vec<u8>> {
+    fn finish(self, region_id: i64, cfg: &ResolvedConfig) -> Result<Vec<u8>> {
         let width = cfg.typed.feature_sets.fragment_sequence.seq_window_w;
         let mut planes: [Vec<u8>; PLANE_COUNT] = Default::default();
         let [dna0, dna1, dna2] = self.dna;
@@ -748,7 +738,6 @@ impl PayloadBuilder {
         output.write_u16::<LittleEndian>(8)?; // cycle-index bit width
         output.write_u16::<LittleEndian>(STRUCTURAL_RECORD_BYTES as u16)?;
         output.write_i64::<LittleEndian>(region_id)?;
-        output.write_i64::<LittleEndian>(local_pos)?;
         for plane in &planes {
             output.write_u64::<LittleEndian>(plane.len() as u64)?;
         }
@@ -764,21 +753,14 @@ impl PayloadBuilder {
 /// appends the fragment to the final compact planes.
 pub struct RegionPayloadBuilder {
     region_id: i64,
-    local_pos: i64,
     payload: PayloadBuilder,
 }
 
 impl RegionPayloadBuilder {
-    pub fn new(
-        region_id: i64,
-        local_pos: i64,
-        expected_fragments: usize,
-        cfg: &ResolvedConfig,
-    ) -> Self {
+    pub fn new(region_id: i64, expected_fragments: usize, cfg: &ResolvedConfig) -> Self {
         let width = cfg.typed.feature_sets.fragment_sequence.seq_window_w;
         Self {
             region_id,
-            local_pos,
             payload: PayloadBuilder::new(PayloadKind::Natural, expected_fragments, width),
         }
     }
@@ -797,10 +779,9 @@ impl RegionPayloadBuilder {
     /// serialized behind the single bank writer.
     pub fn finish(self, cfg: &ResolvedConfig) -> Result<PackedRegion> {
         let count = self.payload.count;
-        let payload = self.payload.finish(self.region_id, self.local_pos, cfg)?;
+        let payload = self.payload.finish(self.region_id, cfg)?;
         Ok(PackedRegion {
             region_id: self.region_id,
-            local_pos: self.local_pos,
             payloads: vec![compress_payload(&payload)?],
             counts: vec![count],
         })
@@ -813,7 +794,6 @@ impl RegionPayloadBuilder {
 #[doc(hidden)]
 pub fn encode_payload(
     region_id: i64,
-    local_pos: i64,
     kind: PayloadKind,
     fragments: &[&MaterializedFragment],
     cfg: &ResolvedConfig,
@@ -902,7 +882,6 @@ pub fn encode_payload(
     output.write_u16::<LittleEndian>(8)?;
     output.write_u16::<LittleEndian>(STRUCTURAL_RECORD_BYTES as u16)?;
     output.write_i64::<LittleEndian>(region_id)?;
-    output.write_i64::<LittleEndian>(local_pos)?;
     for plane in &planes {
         output.write_u64::<LittleEndian>(plane.len() as u64)?;
     }
@@ -917,7 +896,6 @@ pub fn encode_payload(
 /// this function returns.
 pub fn pack_region(
     region_id: i64,
-    local_pos: i64,
     fragments: &[MaterializedFragment],
     cfg: &ResolvedConfig,
 ) -> Result<PackedRegion> {
@@ -939,10 +917,9 @@ pub fn pack_region(
             fragment.orientation_code,
         )
     });
-    let payload = encode_payload(region_id, local_pos, PayloadKind::Natural, &natural, cfg)?;
+    let payload = encode_payload(region_id, PayloadKind::Natural, &natural, cfg)?;
     Ok(PackedRegion {
         region_id,
-        local_pos,
         payloads: vec![compress_payload(&payload)?],
         counts: vec![natural.len() as u32],
     })
@@ -965,7 +942,6 @@ fn write_binary_index(path: &Path, rows: &[BankIndexRow]) -> Result<()> {
         }
         writer.write_u32::<LittleEndian>(row.region_index)?;
         writer.write_i64::<LittleEndian>(row.region_id)?;
-        writer.write_i64::<LittleEndian>(row.local_pos)?;
         for payload in &row.payloads {
             writer.write_u32::<LittleEndian>(payload.count)?;
             writer.write_u64::<LittleEndian>(payload.offset)?;
@@ -981,12 +957,10 @@ fn write_binary_index(path: &Path, rows: &[BankIndexRow]) -> Result<()> {
 pub fn region_keys_from_candidates(
     candidates: &[ValidatedFragmentCandidate],
     cfg: &ResolvedConfig,
-) -> Vec<(i64, i64)> {
-    // One region is one key: local_pos is always 0 now that regions are no
-    // longer subdivided into blocks.
+) -> Vec<i64> {
     candidates
         .iter()
-        .map(|candidate| (candidate.key.region_id, 0))
+        .map(|candidate| candidate.key.region_id)
         .collect::<std::collections::BTreeSet<_>>()
         .into_iter()
         .collect()
@@ -1003,14 +977,11 @@ pub fn write_region_available_counts(
     index_rows: &[BankIndexRow],
     stats: &[ReservoirStats],
 ) -> Result<ArrayMeta> {
-    let lookup: BTreeMap<_, _> = stats
-        .iter()
-        .map(|row| ((row.region_id, row.local_pos as i64), row))
-        .collect();
+    let lookup: BTreeMap<_, _> = stats.iter().map(|row| (row.region_id, row)).collect();
     let mut counts = Vec::with_capacity(index_rows.len());
     let mut kept = 0usize;
     for row in index_rows {
-        let key = (row.region_id, row.local_pos);
+        let key = row.region_id;
         let stat = lookup.get(&key).ok_or_else(|| {
             anyhow::anyhow!("missing reservoir statistics for bank index key {key:?}")
         })?;

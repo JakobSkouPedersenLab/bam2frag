@@ -86,7 +86,7 @@ fn region_payload(region_id: i64, count: usize) -> Vec<u8> {
         .map(|index| materialized_fragment([0.25, 0.5, 0.75], (index % 2) as u8))
         .collect::<Vec<_>>();
     let refs = fragments.iter().collect::<Vec<_>>();
-    encode_payload(region_id, 0, PayloadKind::Natural, &refs, &cfg).unwrap()
+    encode_payload(region_id, PayloadKind::Natural, &refs, &cfg).unwrap()
 }
 
 /// Write `(region_id, payload, count)` regions through the production writer.
@@ -96,7 +96,6 @@ fn write_bank(dir: &Path, regions: &[(i64, Vec<u8>, u32)]) -> (PathBuf, PathBuf)
         writer
             .write_region(PackedRegion {
                 region_id: *region_id,
-                local_pos: 0,
                 payloads: vec![compress_payload(payload).unwrap()],
                 counts: vec![*count],
             })
@@ -124,7 +123,7 @@ const ROW_NBYTES: usize = 32;
 fn headers_round_trip_and_old_or_unknown_versions_are_rejected() {
     let cfg = natural_resolved_config();
     let fragment = materialized_fragment([0.0, 1.0, 0.5], 0);
-    let payload = encode_payload(7, 0, PayloadKind::Natural, &[&fragment], &cfg).unwrap();
+    let payload = encode_payload(7, PayloadKind::Natural, &[&fragment], &cfg).unwrap();
     assert_eq!(&payload[..8], b"fragment bank");
     assert_eq!(u16::from_le_bytes(payload[8..10].try_into().unwrap()), 8);
     assert_eq!(payload[11], 9);
@@ -142,7 +141,6 @@ fn headers_round_trip_and_old_or_unknown_versions_are_rejected() {
     writer
         .write_region(PackedRegion {
             region_id: 7,
-            local_pos: 0,
             payloads: vec![compress_payload(&payload).unwrap()],
             counts: vec![1],
         })
@@ -322,7 +320,7 @@ fn exact_round_trip_preserves_planes_structural_fields_and_atac_order() {
     ];
     let refs = fragments.iter().collect::<Vec<_>>();
     let decoded =
-        decode_payload(&encode_payload(7, 0, PayloadKind::Natural, &refs, &cfg).unwrap()).unwrap();
+        decode_payload(&encode_payload(7, PayloadKind::Natural, &refs, &cfg).unwrap()).unwrap();
     assert_eq!(
         decoded.atac_overlap_fractions,
         vec![[0.0; 3], [1.0; 3], [0.125, 0.5, 0.875]]
@@ -375,10 +373,7 @@ fn validated_endpoints_are_centred_and_cycles_start_at_both_five_prime_ends() {
 
     let mut scratch = MaterializeScratch::with_width(320);
     let candidate = ValidatedFragmentCandidate {
-        key: ReservoirKey {
-            region_id: 7,
-            local_pos: 0,
-        },
+        key: ReservoirKey { region_id: 7 },
         anchor_rpos0: 529,
         pair,
     };
@@ -424,10 +419,7 @@ fn accepted_snv_is_only_a_ref_versus_read_difference() {
     .unwrap();
     let mut scratch = MaterializeScratch::with_width(320);
     let candidate = ValidatedFragmentCandidate {
-        key: ReservoirKey {
-            region_id: 7,
-            local_pos: 0,
-        },
+        key: ReservoirKey { region_id: 7 },
         anchor_rpos0: 524,
         pair,
     };
@@ -444,7 +436,7 @@ fn accepted_snv_is_only_a_ref_versus_read_difference() {
 fn malformed_plane_table_payload_and_index_are_rejected() {
     let cfg = natural_resolved_config();
     let fragment = materialized_fragment([0.0; 3], 0);
-    let mut payload = encode_payload(7, 0, PayloadKind::Natural, &[&fragment], &cfg).unwrap();
+    let mut payload = encode_payload(7, PayloadKind::Natural, &[&fragment], &cfg).unwrap();
     let mut malformed_structural = payload.clone();
     let orientation_offset = malformed_structural.len() - 2;
     malformed_structural[orientation_offset] = 2;
@@ -476,7 +468,7 @@ fn reports_dnapack8_decode_throughput() {
         .map(|index| materialized_fragment([0.25, 0.5, 0.75], (index % 2) as u8))
         .collect::<Vec<_>>();
     let refs = fragments.iter().collect::<Vec<_>>();
-    let payload = encode_payload(7, 0, PayloadKind::Natural, &refs, &cfg).unwrap();
+    let payload = encode_payload(7, PayloadKind::Natural, &refs, &cfg).unwrap();
 
     let iterations = 20usize;
     let started = Instant::now();

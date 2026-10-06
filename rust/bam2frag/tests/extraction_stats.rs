@@ -318,10 +318,7 @@ fn a_low_quality_five_prime_motif_base_is_counted_but_never_rejected() {
     let mut reservoir = KeyedReservoir::new(10_000, 17, None);
     reservoir
         .consider(ValidatedFragmentCandidate {
-            key: ReservoirKey {
-                region_id: 7,
-                local_pos: 0,
-            },
+            key: ReservoirKey { region_id: 7 },
             anchor_rpos0: candidate.left_5p_genomic,
             pair: candidate,
         })

@@ -8,7 +8,6 @@ use serde::Serialize;
 #[derive(Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ReservoirKey {
     pub region_id: i64,
-    pub local_pos: u16,
 }
 
 #[derive(Clone, Debug, Default, Serialize)]
