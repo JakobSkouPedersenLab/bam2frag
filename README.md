@@ -2,6 +2,11 @@
 
 A Rust tool to extract cfDNA fragments from BAM files very fast.
 
+<p align="center">
+  <img src="fragment.png" alt="Example cfDNA fragment representation showing reference bases, paired-end reads, base qualities, and sequencing cycles in a centred 320 bp window." width="900">
+</p>
+
+
 `bam2frag` scans a coordinate-sorted BAM, reconstructs every eligible paired-end cfDNA fragment against the reference, and stores a uniform random sample of them per genomic region in a compressed binary fragment bank. A thin Python CLI drives the Rust extractor on a per-sample basis.
 
 The tool extracts **natural raw cfDNA fragments only**. It has no mutation input, no tumor-catalog or ctDNA-anchored extraction path, and no patient or sample covariate tables: the output describes the molecules in the BAM and nothing else.
