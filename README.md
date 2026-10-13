@@ -3,7 +3,7 @@
 A Rust tool to extract cfDNA fragments from BAM files very fast.
 
 <p align="center">
-  <img src="fragment.png" alt="Example cfDNA fragment representation showing reference bases, paired-end reads, base qualities, and sequencing cycles in a centred 320 bp window." width="900">
+  <img src="fragment.png" alt="Example cfDNA fragment representation showing reference bases, paired-end reads, base qualities, and sequencing cycles in a centred 320 bp window." width="600">
 </p>
 
 
